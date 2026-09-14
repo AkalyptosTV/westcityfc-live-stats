@@ -45,6 +45,6 @@ function render(d){
  document.getElementById('status').textContent='LIVE';document.getElementById('status').className='status ok';
 }
 firebase.initializeApp(FIREBASE_CONFIG);
-firebase.auth().signInAnonymously().then(()=>{firebase.database().ref('liveMatch').on('value',snap=>{let d=snap.val();if(d)render(d)},()=>{document.getElementById('status').textContent='OFFLINE';document.getElementById('status').className='status'})}).catch(()=>{document.getElementById('status').textContent='OFFLINE';document.getElementById('status').className='status'});
+firebase.auth().signInAnonymously().then(()=>{firebase.database().ref('liveMatch').on('value',snap=>{let d=snap.val();if(d)render(d)},err=>{document.getElementById('status').textContent='OFFLINE — '+(err.code||'DB ERROR')+' — '+(err.message||'');document.getElementById('status').className='status'})}).catch(err=>{document.getElementById('status').textContent='OFFLINE — '+(err.code||'AUTH ERROR')+' — '+(err.message||err);document.getElementById('status').className='status'});
 setInterval(()=>{if(current&&current.state){let ts=current.state.timers||[],i=(ts[1]?.visible&&!ts[0]?.visible)?1:0;document.getElementById('clock').textContent=fmt(timerMs(ts[i]));}},500);
 </script></body></html>
