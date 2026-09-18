@@ -37,7 +37,26 @@ function render(d){
  document.getElementById('ldot').style.background=color(lf.color);document.getElementById('rdot').style.background=color(rf.color);
  let g=field('ΓΚΟΛ');document.getElementById('lscore').textContent=g[L]??0;document.getElementById('rscore').textContent=g[R]??0;
  let rows=['ΓΚΟΛ','ΣΟΥΤ ΣΤΗΝ ΕΣΤΙΑ','ΣΟΥΤ ΕΚΤΟΣ ΣΤΟΧΟΥ','ΚΙΤΡΙΝΗ ΚΑΡΤΑ','ΚΟΚΚΙΝΗ ΚΑΡΤΑ','ΚΟΡΝΕΡ'];
- document.getElementById('stats').innerHTML=rows.map((n,i)=>`<div class="st ${i?'':'bigstat'}">${field(n)[L]??0}</div><div class="label">${esc(n)}</div><div class="st ${i?'':'bigstat'}">${field(n)[R]??0}</div>`).join('');
+ // The mobile view also derives shots-on-target from the event log as a
+ // safety net: every goal counts as one shot on target, while normal
+ // shot-on-target events count separately. We take the larger of the
+ // Firebase state value and this event-derived value, avoiding double counts.
+ let liveEvents=Array.isArray(d.events)?d.events:[];
+ function shotOnTargetValue(side){
+   let stateValue=Number(field('ΣΟΥΤ ΣΤΗΝ ΕΣΤΙΑ')[side]??0);
+   let derived=liveEvents.filter(e=>e.side===side).reduce((n,e)=>{
+     let label=String(e.label||'');
+     if(label.startsWith('ΓΚΟΛ')) return n+1;
+     if(label.startsWith('ΣΟΥΤ ΣΤΗΝ ΕΣΤΙΑ')) return n+1;
+     return n;
+   },0);
+   return Math.max(stateValue,derived);
+ }
+ document.getElementById('stats').innerHTML=rows.map((n,i)=>{
+   let lv=n==='ΣΟΥΤ ΣΤΗΝ ΕΣΤΙΑ'?shotOnTargetValue(L):(field(n)[L]??0);
+   let rv=n==='ΣΟΥΤ ΣΤΗΝ ΕΣΤΙΑ'?shotOnTargetValue(R):(field(n)[R]??0);
+   return `<div class="st ${i?'':'bigstat'}">${lv}</div><div class="label">${esc(n)}</div><div class="st ${i?'':'bigstat'}">${rv}</div>`;
+ }).join('');
  let ts=s.timers||[],ti=(ts[1]?.visible&&!ts[0]?.visible)?1:0;document.getElementById('clock').textContent=fmt(timerMs(ts[ti]));document.getElementById('half').textContent=ti?'2ο ΗΜΙΧΡΟΝΟ':'1ο ΗΜΙΧΡΟΝΟ';
  let p=d.possessionSeconds||[{home:0,away:0},{home:0,away:0}],a=(p[0]?.[L]||0)+(p[1]?.[L]||0),b=(p[0]?.[R]||0)+(p[1]?.[R]||0),pp=pct(a,b);document.getElementById('lp').textContent=pp.toFixed(1)+'%';document.getElementById('rp').textContent=(100-pp).toFixed(1)+'%';document.getElementById('bar').style.width=pp+'%';
  let p1=pct(p[0]?.[L]||0,p[0]?.[R]||0),p2=pct(p[1]?.[L]||0,p[1]?.[R]||0);document.getElementById('halves').innerHTML=`1ο: ${lf.title||'WEST'} ${p1.toFixed(1)}% — ${rf.title||'OSFP'} ${(100-p1).toFixed(1)}%<br>2ο: ${lf.title||'WEST'} ${p2.toFixed(1)}% — ${rf.title||'OSFP'} ${(100-p2).toFixed(1)}%`;
